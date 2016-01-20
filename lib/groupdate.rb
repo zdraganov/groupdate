@@ -10,14 +10,7 @@ module Groupdate
   mattr_accessor :week_start, :day_start, :time_zone, :use_active_record
   self.week_start = :sun
   self.day_start = 0
-  self.use_active_record = true
 end
 
 require "groupdate/enumerable"
-
-begin
-  require "active_record" if Groupdate.use_active_record
-rescue LoadError
-  # do nothing
-end
 require "groupdate/active_record" if defined?(ActiveRecord)
