@@ -2,6 +2,7 @@ require "active_support/core_ext/module/attribute_accessors"
 require "active_support/time"
 require "groupdate/version"
 require "groupdate/magic"
+# require "groupdate/railtie" if defined?(::Rails::Railtie)
 
 module Groupdate
   FIELDS = [:second, :minute, :hour, :day, :week, :month, :year, :day_of_week, :hour_of_day, :day_of_month, :month_of_year]
@@ -13,4 +14,3 @@ module Groupdate
 end
 
 require "groupdate/enumerable"
-require "groupdate/active_record" if defined?(ActiveRecord)
