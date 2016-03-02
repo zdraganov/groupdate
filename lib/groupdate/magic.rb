@@ -8,13 +8,9 @@ module Groupdate
       @field = field
       @options = options
 
-      unless time_zone
-        raise "Unrecognized time zone"
-      end
+      raise "Unrecognized time zone" unless time_zone
 
-      if field == :week && !week_start
-        raise "Unrecognized :week_start option"
-      end
+      raise "Unrecognized :week_start option" if field == :week && !week_start
     end
 
     def group_by(enum, &_block)
@@ -49,6 +45,8 @@ module Groupdate
             ["MONTH(CONVERT_TZ(DATE_SUB(#{column}, INTERVAL #{day_start} HOUR), '+00:00', ?))", time_zone]
           when :week
             ["CONVERT_TZ(DATE_FORMAT(CONVERT_TZ(DATE_SUB(#{column}, INTERVAL ((#{7 - week_start} + WEEKDAY(CONVERT_TZ(#{column}, '+00:00', ?) - INTERVAL #{day_start} HOUR)) % 7) DAY) - INTERVAL #{day_start} HOUR, '+00:00', ?), '%Y-%m-%d 00:00:00') + INTERVAL #{day_start} HOUR, ?, '+00:00')", time_zone, time_zone, time_zone]
+          when :quarter
+            ["DATE_ADD(CONVERT_TZ(DATE_FORMAT(DATE(CONCAT(EXTRACT(YEAR FROM CONVERT_TZ(DATE_SUB(#{column}, INTERVAL #{day_start} HOUR), '+00:00', ?)), '-', LPAD(1 + 3 * (QUARTER(CONVERT_TZ(DATE_SUB(#{column}, INTERVAL #{day_start} HOUR), '+00:00', ?)) - 1), 2, '00'), '-01')), '%Y-%m-%d %H:%i:%S'), ?, '+00:00'), INTERVAL #{day_start} HOUR)", time_zone, time_zone, time_zone]
           else
             format =
               case field
@@ -109,9 +107,7 @@ module Groupdate
     def perform(relation, method, *args, &block)
       # undo reverse since we do not want this to appear in the query
       reverse = relation.send(:reverse_order_value)
-      if reverse
-        relation = relation.except(:reverse_order)
-      end
+      relation = relation.except(:reverse_order) if reverse
       order = relation.order_values.first
       if order.is_a?(String)
         parts = order.split(" ")
@@ -207,7 +203,11 @@ module Groupdate
           if time_range.first
             series = [round_time(time_range.first)]
 
-            step = 1.send(field)
+            if field == :quarter
+              step = 3.months
+            else
+              step = 1.send(field)
+            end
 
             while (next_step = round_time(series.last + step)) && time_range.cover?(next_step)
               series << next_step
@@ -231,9 +231,7 @@ module Groupdate
         end
 
       # reversed above if multiple groups
-      if !multiple_groups && reverse
-        series = series.to_a.reverse
-      end
+      series = series.to_a.reverse if !multiple_groups && reverse
 
       locale = options[:locale] || I18n.locale
       key_format =
@@ -253,9 +251,11 @@ module Groupdate
               when :month_of_year
                 key = Date.new(2014, key, 1).to_time
               end
-              I18n.localize(key, format: options[:format].to_s, locale: locale)
+              I18n.localize(key, format: options[:format], locale: locale)
             end
           end
+        elsif (options[:dates] || (Groupdate.dates && !options.key?(:dates))) && [:day, :week, :month, :quarter, :year].include?(field)
+          lambda { |k| k.to_date }
         else
           lambda { |k| k }
         end
@@ -273,11 +273,11 @@ module Groupdate
       time =
         case field
         when :second
-          time.change(:usec => 0)
+          time.change(usec: 0)
         when :minute
-          time.change(:sec => 0)
+          time.change(sec: 0)
         when :hour
-          time.change(:min => 0)
+          time.change(min: 0)
         when :day
           time.beginning_of_day
         when :week
@@ -286,6 +286,8 @@ module Groupdate
           (time - ((7 - week_start + weekday) % 7).days).midnight
         when :month
           time.beginning_of_month
+        when :quarter
+          time.beginning_of_quarter
         when :year
           time.beginning_of_year
         when :hour_of_day

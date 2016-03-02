@@ -21,8 +21,6 @@ Supports PostgreSQL and MySQL, plus arrays and hashes
 
 ## Get Started
 
-Group by day
-
 ```ruby
 User.group_by_day(:created_at).count
 # {
@@ -34,13 +32,15 @@ User.group_by_day(:created_at).count
 
 Results are returned in ascending order by default, so no need to sort.
 
-You can also group by:
+You can group by:
 
 - second
 - minute
 - hour
+- day
 - week
 - month
+- quarter
 - year
 
 and
@@ -135,7 +135,24 @@ or
 User.group_by_day(:created_at).order("day desc").count
 ```
 
-### Format
+### Keys
+
+To get keys as date objects instead of time objects, use:
+
+```ruby
+User.group_by_day(:created_at, dates: true).count
+# {
+#   2013-03-10 => 70,
+#   2013-03-17 => 54,
+#   2013-03-24 => 80
+# }
+```
+
+or make this the default with:
+
+```ruby
+Groupdate.dates = true
+```
 
 To get keys in a different format, use:
 
@@ -158,7 +175,7 @@ User.group_by_hour_of_day(:created_at, format: "%-l %P").count
 # }
 ```
 
-Takes a `String`, which is passed to [strftime](http://strfti.me/), or a `Proc`.  You can pass a locale with the `locale` option.
+Takes a `String`, which is passed to [strftime](http://strfti.me/), or a `Symbol`, which is looked up by `I18n.localize` in `i18n` scope 'time.formats', or a `Proc`.  You can pass a locale with the `locale` option.
 
 ### Dynamic Grouping
 

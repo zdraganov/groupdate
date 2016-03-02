@@ -1,6 +1,14 @@
-## 2.5.1 [unreleased]
+## 2.5.2
 
+- Added `dates` option to return dates for day, week, month, quarter, and year
+
+## 2.5.1
+
+- Added `group_by_quarter`
 - Added `default_value` option
+- Accept symbol for `format` option
+- Raise `ArgumentError` if no field specified
+- Added support for ActiveRecord 5 beta
 
 ## 2.5.0
 
